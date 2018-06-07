@@ -1,0 +1,247 @@
+<html>
+<head>
+<title>DataMigration.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.ln { color: rgb(0,0,0); font-weight: normal; font-style: normal; }
+.s0 { color: rgb(128,128,128); }
+.s1 { color: rgb(169,183,198); }
+.s2 { color: rgb(204,120,50); font-weight: bold; }
+.s3 { color: rgb(204,120,50); }
+.s4 { color: rgb(165,194,97); }
+.s5 { color: rgb(0,128,128); }
+.s6 { color: rgb(104,151,187); }
+</style>
+</head>
+<BODY BGCOLOR="#2b2b2b">
+<TABLE CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#C0C0C0" >
+<TR><TD><CENTER>
+<FONT FACE="Arial, Helvetica" COLOR="#000000">
+DataMigration.py</FONT>
+</center></TD></TR></TABLE>
+<pre>
+
+<span class="s0">#  -*- coding:utf-8 -*-</span><span class="s1"> 
+</span><span class="s0"># by zhangxx</span><span class="s1"> 
+</span><span class="s2">import </span><span class="s1">logging 
+logging.basicConfig(level=logging.INFO</span><span class="s3">,</span><span class="s1"> 
+                format=</span><span class="s4">'%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s'</span><span class="s3">,</span><span class="s1"> 
+                datefmt=</span><span class="s4">'%a, %d %b %Y %H:%M:%S'</span><span class="s3">,</span><span class="s1"> 
+                filename=</span><span class="s4">'myapp.log'</span><span class="s3">,</span><span class="s1"> 
+                filemode=</span><span class="s4">'w'</span><span class="s1">) 
+</span><span class="s4">''' 
+#定义一个StreamHandler，将INFO级别或更高的日志信息打印到标准错误，并将其添加到当前的日志处理对象# 
+console = logging.StreamHandler() 
+console.setLevel(logging.INFO) 
+formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s') 
+console.setFormatter(formatter) 
+logging.getLogger('').addHandler(console) 
+'''</span><span class="s1"> 
+ 
+</span><span class="s2">def </span><span class="s1">Log(msg): 
+    </span><span class="s2">print </span><span class="s1">msg 
+    logging.info(msg) 
+ 
+ 
+ 
+</span><span class="s2">import </span><span class="s1">os 
+</span><span class="s2">import </span><span class="s1">shutil 
+</span><span class="s2">import </span><span class="s1">time 
+</span><span class="s2">from </span><span class="s1">Models.UserModel </span><span class="s2">import </span><span class="s1">UserModel 
+</span><span class="s2">from </span><span class="s1">Models.Thing </span><span class="s2">import </span><span class="s1">Thing 
+</span><span class="s2">from </span><span class="s1">Models.Message </span><span class="s2">import </span><span class="s1">Message 
+</span><span class="s2">from </span><span class="s1">Utils.JSON </span><span class="s2">import </span><span class="s1">JSON 
+</span><span class="s2">from </span><span class="s1">Utils.File </span><span class="s2">import </span><span class="s1">File 
+</span><span class="s2">from </span><span class="s1">Utils.Time </span><span class="s2">import </span><span class="s1">Time 
+</span><span class="s2">from </span><span class="s1">Utils.ApiHelper </span><span class="s2">import </span><span class="s1">ApiHelper 
+ 
+</span><span class="s2">if </span><span class="s1">__name__ == </span><span class="s4">'__main__'</span><span class="s1">: 
+    ticks = time.time() 
+    </span><span class="s0"># 根据记录的状态判断测量记录执行到哪里</span><span class="s1"> 
+    ecgCareOLPath = </span><span class="s4">'d:/EcgCareOL/_Store/'</span><span class="s1"> 
+    exportPath = </span><span class="s4">'d:/ws/svn/src/trunk/Service/Api/EcgCare/raws/'        </span><span class="s0"># 心电文件导出目标路径</span><span class="s1"> 
+    apiRoot = </span><span class="s4">'http://192.168.1.202:8080'                               </span><span class="s0"># API 根地址</span><span class="s1"> 
+    transKey = </span><span class="s4">'NYCghQrDxkI'                                            </span><span class="s0"># 传输令牌</span><span class="s1"> 
+    mgrAccount = </span><span class="s4">'zxxmgr'                                               </span><span class="s0"># 主管帐号</span><span class="s1"> 
+    cusAccount = </span><span class="s4">'zxxcus'                                               </span><span class="s0"># 客服帐号</span><span class="s1"> 
+    expAccount = </span><span class="s4">'zxxexp'                                               </span><span class="s0"># 专家帐号</span><span class="s1"> 
+    password = </span><span class="s4">'123456'                                                 </span><span class="s0"># 登录密码</span><span class="s1"> 
+    schemeName = </span><span class="s4">'数据迁移套餐1'                                        </span><span class="s0"># 套餐名称 ( 恒定过期时间 )</span><span class="s1"> 
+    DefaultUserName = </span><span class="s5">u'UnknowUser'                                     </span><span class="s0"># 缺省用户名称</span><span class="s1"> 
+    DefaultUserAddr = </span><span class="s5">u'未填写地址'                                     </span><span class="s0"># 缺省用户地址</span><span class="s1"> 
+    </span><span class="s0"># //////////////////////////////////////////////////////////</span><span class="s1"> 
+    </span><span class="s2">if not </span><span class="s1">os.path.exists(exportPath): exit(</span><span class="s4">'[exportPath] 目录不存在!'</span><span class="s1">)</span><span class="s0"># 检查 心电文件导出目标路径是否存在</span><span class="s1"> 
+    dah = ApiHelper(apiRoot</span><span class="s3">, </span><span class="s1">transKey)                                  </span><span class="s0"># 初始化医生客户端</span><span class="s1"> 
+    cah = ApiHelper(apiRoot</span><span class="s3">, </span><span class="s1">transKey)                                  </span><span class="s0"># 初始化客服客户端</span><span class="s1"> 
+    mah = ApiHelper(apiRoot</span><span class="s3">, </span><span class="s1">transKey)                                  </span><span class="s0"># 初始化主管客户端</span><span class="s1"> 
+    eah = ApiHelper(apiRoot</span><span class="s3">, </span><span class="s1">transKey)                                  </span><span class="s0"># 初始化专家客户端</span><span class="s1"> 
+    </span><span class="s2">if </span><span class="s1">mah.Auth(mgrAccount</span><span class="s3">, </span><span class="s1">password): Log(</span><span class="s5">u'主管 建权成功: {0}'</span><span class="s1">.format(mah.AccessKey)) 
+    </span><span class="s2">if </span><span class="s1">cah.Auth(cusAccount</span><span class="s3">, </span><span class="s1">password): Log(</span><span class="s5">u'客服 建权成功: {0}'</span><span class="s1">.format(cah.AccessKey)) 
+    </span><span class="s2">if </span><span class="s1">eah.Auth(expAccount</span><span class="s3">, </span><span class="s1">password): Log(</span><span class="s5">u'专家 建权成功: {0}'</span><span class="s1">.format(eah.AccessKey)) 
+    countSucceed = </span><span class="s6">0</span><span class="s1"> 
+    schemeUnique = mah.MgrGetSchemeInfo(schemeName)[</span><span class="s4">'Unique'</span><span class="s1">]           </span><span class="s0"># 获取套餐编码</span><span class="s1"> 
+    Log(</span><span class="s5">u'读取EcgCareOnline平台用户列表'</span><span class="s1">) 
+    allText = File.ReadAllText(ecgCareOLPath + </span><span class="s4">'Users.json'</span><span class="s1">) 
+    jsonUsers = JSON.Deserialize(allText) 
+    totalUser = len(jsonUsers) 
+    Log(</span><span class="s5">u'共需要迁移 {0} 个用户...'</span><span class="s1">.format(totalUser)) 
+    indexUser = </span><span class="s6">0</span><span class="s1"> 
+    </span><span class="s2">for </span><span class="s1">jsonUser </span><span class="s2">in </span><span class="s1">jsonUsers: 
+        indexUser += </span><span class="s6">1</span><span class="s1"> 
+        Log(</span><span class="s5">u'正在迁移第 {0} 个用户, 共 {1} 个用户需要迁移'</span><span class="s1">.format(indexUser</span><span class="s3">,</span><span class="s1">totalUser)) 
+        user = JSON.DictToInst(jsonUser</span><span class="s3">, </span><span class="s1">UserModel()) 
+        </span><span class="s2">if </span><span class="s6">0 </span><span class="s1">== len(user.userAddr): 
+            Log(</span><span class="s5">u'!!!医生地址不得为空! 已置为缺省值.'</span><span class="s1">) 
+            user.userAddr = DefaultUserAddr 
+        </span><span class="s2">if </span><span class="s5">u'已作废' </span><span class="s1">== user.userName: 
+            Log(</span><span class="s5">u'!!!已作废 记录, 跳过, {0}'</span><span class="s1">.format(user.loginName)) 
+            </span><span class="s2">continue</span><span class="s1"> 
+        Log(</span><span class="s5">u'添加医生' </span><span class="s1">+ user.loginName) 
+        </span><span class="s2">try</span><span class="s1">: 
+            mah.AddDoc({</span><span class="s4">'loginName'</span><span class="s1">: user.loginName</span><span class="s3">, </span><span class="s4">'password'</span><span class="s1">: user.password</span><span class="s3">, </span><span class="s4">'userName'</span><span class="s1">: user.userName</span><span class="s3">, </span><span class="s4">'email'</span><span class="s1">: user.userEmail</span><span class="s3">, </span><span class="s4">'docDeviceNumber'</span><span class="s1">: user.userDevice</span><span class="s3">, </span><span class="s4">'mechanism'</span><span class="s1">: user.userCompany</span><span class="s3">, </span><span class="s4">'docAddress'</span><span class="s1">: user.userAddr</span><span class="s3">, </span><span class="s4">'phone'</span><span class="s1">: user.userPhone</span><span class="s3">, </span><span class="s4">'docPostcode'</span><span class="s1">: user.userPostcode</span><span class="s3">, </span><span class="s4">'docWechat'</span><span class="s1">: </span><span class="s4">''</span><span class="s3">, </span><span class="s4">'identityCard'</span><span class="s1">: </span><span class="s4">''</span><span class="s3">, </span><span class="s4">'gender'</span><span class="s1">: </span><span class="s6">0</span><span class="s3">, </span><span class="s4">'faceIcon'</span><span class="s1">: </span><span class="s4">''</span><span class="s1">}) 
+            </span><span class="s2">if </span><span class="s1">dah.Auth(user.loginName</span><span class="s3">, </span><span class="s1">user.password): Log(</span><span class="s5">u'医生 建权成功:'</span><span class="s1">+dah.AccessKey) 
+        </span><span class="s2">except </span><span class="s1">Exception: 
+            Log(</span><span class="s5">u'!!!添加医生失败 [' </span><span class="s1">+ user.loginName + </span><span class="s5">U']'</span><span class="s1">) 
+ 
+        Log(</span><span class="s5">u'获取医生信息'</span><span class="s1">) 
+        </span><span class="s2">try</span><span class="s1">: 
+            userUnique = dah.GetDocInfo()[</span><span class="s4">'unique'</span><span class="s1">] 
+        </span><span class="s2">except </span><span class="s1">Exception: 
+            Log(</span><span class="s5">u'!!!获取医生信息失败 [' </span><span class="s1">+ user.loginName + </span><span class="s5">U']'</span><span class="s1">) 
+            </span><span class="s2">continue</span><span class="s1"> 
+ 
+        Log(</span><span class="s5">u'为医生订阅套餐'</span><span class="s1">) 
+        </span><span class="s0"># /api/Scheme/SchemeSubscription?accessKey=e6Kt3s13y0I&amp;userUnique=GjgsJ7jcRE8&amp;schemeUnique=PaJxQ4AL20M</span><span class="s1"> 
+        </span><span class="s2">try</span><span class="s1">: 
+            mah.SchemeSubscription(userUnique</span><span class="s3">, </span><span class="s1">schemeUnique) 
+        </span><span class="s2">except </span><span class="s1">Exception: 
+            Log(</span><span class="s5">u'!!!订阅套餐失败 [{0}]'</span><span class="s1">.format(user.loginName)) 
+            </span><span class="s2">continue</span><span class="s1"> 
+ 
+        Log(</span><span class="s5">u'读取老平台测量记录...'</span><span class="s1">) 
+        UserId = user.UserId 
+        file = ecgCareOLPath + </span><span class="s4">'datas/' </span><span class="s1">+ UserId + </span><span class="s4">'/things.json'</span><span class="s1"> 
+        </span><span class="s2">if not </span><span class="s1">os.path.exists(file): 
+            Log(</span><span class="s5">u'!!!文件 [{0}] 不存在!'</span><span class="s1">.format(file)) 
+            </span><span class="s2">continue</span><span class="s1"> 
+        Log(</span><span class="s5">u'遍历测量记录'</span><span class="s1">) 
+        currUserThings = JSON.Deserialize(File.ReadAllText(file)) 
+        countThings = len(currUserThings) 
+        indexThing = </span><span class="s6">0</span><span class="s1"> 
+        </span><span class="s2">for </span><span class="s1">jsonThing </span><span class="s2">in </span><span class="s1">currUserThings: 
+            indexThing += </span><span class="s6">1</span><span class="s1"> 
+            Log(</span><span class="s5">u'正在迁移第 {0} 个用户, 共 {1} 个用户需要迁移, 当前导入第 {2} 共需要导入 {3} 条记录'</span><span class="s1">.format(indexUser</span><span class="s3">,</span><span class="s1">totalUser</span><span class="s3">, </span><span class="s1">indexThing</span><span class="s3">, </span><span class="s1">countThings)) 
+            thing = JSON.DictToInst(jsonThing</span><span class="s3">, </span><span class="s1">Thing()) 
+            rawPath = ecgCareOLPath + </span><span class="s4">'raws/'</span><span class="s1"> 
+            </span><span class="s2">if not </span><span class="s1">os.path.exists(rawPath + thing.rawFile): 
+                Log(</span><span class="s5">u'!!!raw 文件 [{0}] 不存在!'</span><span class="s1">.format(thing.rawFile)) 
+                </span><span class="s2">continue</span><span class="s1"> 
+ 
+            </span><span class="s0"># 更改命名规则</span><span class="s1"> 
+            </span><span class="s0"># _Store/raws/FFFF0000FFFF0006.S_2015-07-10#11_03_52  &gt;&gt; d:/ws/svn/src/trunk/Service/Api/EcgCare/raws/09022048283729FF#2015-12-01#11_29_52_078939.etc</span><span class="s1"> 
+            </span><span class="s0"># .N_ .S_ .Q_ &gt;&gt; #</span><span class="s1"> 
+            rawName = thing.rawFile.replace(</span><span class="s4">'.N_'</span><span class="s3">, </span><span class="s4">'#'</span><span class="s1">).replace(</span><span class="s4">'.S_'</span><span class="s3">, </span><span class="s4">'#'</span><span class="s1">).replace(</span><span class="s4">'.Q_'</span><span class="s3">, </span><span class="s4">'#'</span><span class="s1">) 
+            rawFile = </span><span class="s4">'{0}_000000.etc'</span><span class="s1">.format(rawName) 
+            </span><span class="s0"># LogPrint(rawPath + thing.rawFile + ' &gt;&gt; ' + exportRawPath + rawFile)</span><span class="s1"> 
+            Log(</span><span class="s5">u'复制文件 [{0}]...'</span><span class="s1">.format(thing.rawFile)) 
+            shutil.copyfile(rawPath + thing.rawFile</span><span class="s3">, </span><span class="s1">exportPath + rawFile) 
+            Log(</span><span class="s5">u'统计文件个数...'</span><span class="s1">) 
+            rawParts = rawName.split(</span><span class="s4">'#'</span><span class="s1">) 
+            rawParts.reverse() 
+            rawParts.pop() 
+            rawParts.reverse() 
+            rawPrefix = </span><span class="s4">'#'</span><span class="s1">.join(rawParts) 
+            countRaws = </span><span class="s6">0</span><span class="s1"> 
+            </span><span class="s2">for </span><span class="s1">name </span><span class="s2">in </span><span class="s1">os.listdir(rawPath): 
+                </span><span class="s2">if </span><span class="s1">os.path.isdir(os.path.join(rawPath</span><span class="s3">, </span><span class="s1">name)): </span><span class="s2">continue</span><span class="s1"> 
+                </span><span class="s2">if </span><span class="s6">0 </span><span class="s1">== name.find(rawPrefix): countRaws += </span><span class="s6">1</span><span class="s1"> 
+            </span><span class="s0"># 2015-07-10 10:31:43 =&gt; 2022015 710103143    0</span><span class="s1"> 
+            </span><span class="s0">#                        2022015071010314300000</span><span class="s1"> 
+            measureTime = Time.ParseTime(thing.MeasureTime</span><span class="s3">, </span><span class="s1">False) 
+            reportCode = </span><span class="s4">'202{0:4d}{1:2d}{2:2d}{3:2d}{4:2d}{5:2d}{6:5d}'</span><span class="s1">.format(measureTime.year</span><span class="s3">, </span><span class="s1">measureTime.month</span><span class="s3">, </span><span class="s1">measureTime.day</span><span class="s3">, </span><span class="s1">measureTime.hour</span><span class="s3">, </span><span class="s1">measureTime.minute</span><span class="s3">, </span><span class="s1">measureTime.second</span><span class="s3">, </span><span class="s1">countRaws).replace(</span><span class="s4">' '</span><span class="s3">, </span><span class="s4">'0'</span><span class="s1">) 
+            Log(</span><span class="s5">u'根据测量记录时间设置系统时间'</span><span class="s1">) 
+ 
+            Time.setSystemTime(thing.MeasureTime) 
+ 
+            Log(</span><span class="s5">u'添加测量记录'</span><span class="s1">) 
+            </span><span class="s2">try</span><span class="s1">: 
+                thingUnique = mah.AddThingForTest({</span><span class="s4">&quot;reportCode&quot;</span><span class="s1">: reportCode</span><span class="s3">, </span><span class="s4">&quot;deviceNumber&quot;</span><span class="s1">: user.userDevice</span><span class="s3">, </span><span class="s4">&quot;patientsName&quot;</span><span class="s1">: thing.UserName</span><span class="s3">, </span><span class="s4">&quot;rawFile&quot;</span><span class="s1">: rawFile</span><span class="s3">, </span><span class="s4">&quot;HR&quot;</span><span class="s1">: thing.HR</span><span class="s3">, </span><span class="s4">&quot;RR&quot;</span><span class="s1">: thing.RR</span><span class="s3">, </span><span class="s4">&quot;PR&quot;</span><span class="s1">: thing.PR</span><span class="s3">, </span><span class="s4">&quot;QT&quot;</span><span class="s1">: thing.QT</span><span class="s3">, </span><span class="s4">&quot;QTc&quot;</span><span class="s1">: thing.QTc</span><span class="s3">, </span><span class="s4">&quot;P&quot;</span><span class="s1">: thing.P</span><span class="s3">, </span><span class="s4">&quot;QRS&quot;</span><span class="s1">: thing.QRS</span><span class="s3">, </span><span class="s4">&quot;T&quot;</span><span class="s1">: thing.T</span><span class="s3">, </span><span class="s4">&quot;RV5&quot;</span><span class="s1">: thing.RV5</span><span class="s3">, </span><span class="s4">&quot;SV1&quot;</span><span class="s1">: thing.SV1</span><span class="s3">, </span><span class="s4">&quot;RandS&quot;</span><span class="s1">: thing.RandS</span><span class="s3">, </span><span class="s4">&quot;RecSeconds&quot;</span><span class="s1">: thing.RecSeconds</span><span class="s3">, </span><span class="s4">&quot;MeasureTime&quot;</span><span class="s1">: thing.MeasureTime</span><span class="s3">, </span><span class="s1">})[</span><span class="s4">'unique'</span><span class="s1">] 
+            </span><span class="s2">except </span><span class="s1">Exception: 
+                Log(</span><span class="s5">u'!!!添加测量记录操作失败! [{0}]'</span><span class="s1">.format(rawFile)) 
+                </span><span class="s2">continue</span><span class="s1"> 
+            </span><span class="s2">if </span><span class="s1">thing.Important: 
+                Log(</span><span class="s5">u'收藏当前测量记录'</span><span class="s1">) 
+                dah.MarkedThing(thingUnique) 
+            Log(</span><span class="s5">u'止步于 [新记录] 状态'</span><span class="s1">) 
+            </span><span class="s2">if </span><span class="s1">thing.Status &lt; </span><span class="s6">1</span><span class="s1">: 
+                countSucceed += </span><span class="s6">1 </span><span class="s0"># 统计成功导入记录数</span><span class="s1"> 
+                </span><span class="s2">continue</span><span class="s1"> 
+            Log(</span><span class="s5">u'设置记录为已读'</span><span class="s1">) 
+            dah.SetThingAsRead(thingUnique) 
+            Log(</span><span class="s5">u'止步于 [已读取] 状态'</span><span class="s1">) 
+            </span><span class="s2">if </span><span class="s1">thing.Status &lt; </span><span class="s6">2</span><span class="s1">: 
+                countSucceed += </span><span class="s6">1 </span><span class="s0"># 统计成功导入记录数</span><span class="s1"> 
+                </span><span class="s2">continue</span><span class="s1"> 
+            Log(</span><span class="s5">u'填写患者信息'</span><span class="s1">) 
+            PatientGender = </span><span class="s6">0 </span><span class="s0"># female</span><span class="s1"> 
+            </span><span class="s2">if </span><span class="s1">thing.UserGender == </span><span class="s4">'male'</span><span class="s1">: 
+                PatientGender = </span><span class="s6">1</span><span class="s1"> 
+            </span><span class="s2">if </span><span class="s1">thing.UserName.strip()==</span><span class="s4">''</span><span class="s1">: 
+                Log(</span><span class="s5">u'!!!患者姓名不得为空! 已置为缺省值.'</span><span class="s1">) 
+                thing.UserName = DefaultUserName 
+            dah.SetThingPatientInfo(thingUnique</span><span class="s3">, </span><span class="s1">{</span><span class="s4">'PatientName'</span><span class="s1">: thing.UserName</span><span class="s3">, </span><span class="s4">'PatientGender'</span><span class="s1">: PatientGender</span><span class="s3">, </span><span class="s4">'PatientAge'</span><span class="s1">: thing.UserAge</span><span class="s3">, </span><span class="s4">'Portrait'</span><span class="s1">: thing.Portrait</span><span class="s3">, </span><span class="s4">'MedicalHistory'</span><span class="s1">: thing.MedicalHistory}) 
+            Log(</span><span class="s5">u'止步于 [会诊中] 状态'</span><span class="s1">) 
+            </span><span class="s2">if </span><span class="s1">thing.Status &lt; </span><span class="s6">3</span><span class="s1">: 
+                countSucceed += </span><span class="s6">1 </span><span class="s0"># 统计成功导入记录数</span><span class="s1"> 
+                </span><span class="s2">continue</span><span class="s1"> 
+            Log(</span><span class="s5">u'发起会诊请求'</span><span class="s1">) 
+            dah.RequestDiagnosis(thingUnique) 
+            Log(</span><span class="s5">u'接受会诊请求'</span><span class="s1">) 
+            cah.AcceptDiagnosis(thingUnique</span><span class="s3">, </span><span class="s1">cah.UserUnique) 
+            Log(</span><span class="s5">u'聊天消息'</span><span class="s1">) 
+ 
+            </span><span class="s0"># 遍历 Assistances.json</span><span class="s1"> 
+            </span><span class="s0"># print 'uid',UserId,'tid',thing.Id # 聊天查询参数</span><span class="s1"> 
+            </span><span class="s0"># raw_input('===')</span><span class="s1"> 
+            assistancesFile = ecgCareOLPath + </span><span class="s4">'datas/' </span><span class="s1">+ UserId + </span><span class="s4">'/Assistances.json'</span><span class="s1"> 
+            </span><span class="s2">if not </span><span class="s1">os.path.exists(assistancesFile): 
+                Log(</span><span class="s4">'文件 [{0}] 不存在! [Enter] to continue.'</span><span class="s1">.format(assistancesFile)) 
+                </span><span class="s2">continue</span><span class="s1"> 
+            </span><span class="s2">for </span><span class="s1">assis </span><span class="s2">in </span><span class="s1">JSON.Deserialize(File.ReadAllText(assistancesFile)): 
+                </span><span class="s2">if </span><span class="s1">thing.Id != assis[</span><span class="s4">'Id'</span><span class="s1">]: </span><span class="s2">continue</span><span class="s1"> 
+                </span><span class="s0">#print 'MessageList', len(assis['MessageList']), assis['MessageList']</span><span class="s1"> 
+                </span><span class="s2">for </span><span class="s1">jsonMessage </span><span class="s2">in </span><span class="s1">assis[</span><span class="s4">'MessageList'</span><span class="s1">]: 
+                    message = JSON.DictToInst(jsonMessage</span><span class="s3">, </span><span class="s1">Message()) 
+                    </span><span class="s0"># print 'time:', message.time, 'owner:', message.owner, 'ownerType:', message.ownerType, 'message:', message.message, 'readed:', message.readed</span><span class="s1"> 
+                    </span><span class="s0"># raw_input('******')</span><span class="s1"> 
+                    </span><span class="s2">if </span><span class="s1">message.ownerType &lt; </span><span class="s6">1</span><span class="s1">: </span><span class="s2">continue</span><span class="s1"> 
+                    </span><span class="s2">if </span><span class="s1">message.ownerType == </span><span class="s6">1</span><span class="s1">: 
+                        cah.SendMessage(thingUnique</span><span class="s3">, </span><span class="s1">message.message) 
+                    </span><span class="s2">if </span><span class="s1">message.ownerType == </span><span class="s6">2</span><span class="s1">: 
+                        dah.SendMessage(thingUnique</span><span class="s3">, </span><span class="s4">'111'</span><span class="s1">) 
+ 
+            Log(</span><span class="s5">u'填写诊断结论'</span><span class="s1">) 
+            cah.EditDiagnosisConclusion(thingUnique</span><span class="s3">, </span><span class="s1">eah.UserUnique</span><span class="s3">, </span><span class="s1">thing.Analysis</span><span class="s3">, </span><span class="s1">thing.Conclusion) 
+            Log(</span><span class="s5">u'止步于 [已诊断] 状态'</span><span class="s1">) 
+            </span><span class="s2">if </span><span class="s1">thing.Status &lt; </span><span class="s6">4</span><span class="s1">: 
+                countSucceed += </span><span class="s6">1 </span><span class="s0"># 统计成功导入记录数</span><span class="s1"> 
+                </span><span class="s2">continue</span><span class="s1"> 
+            Log(</span><span class="s5">u'关闭会诊'</span><span class="s1">) 
+            dah.CloseDiagnosis(thingUnique) 
+            countSucceed += </span><span class="s6">1   </span><span class="s0"># 统计成功导入记录数</span><span class="s1"> 
+    Time.syncNTPTime()          </span><span class="s0"># 使用 NTP 网络授时服务将时间同步至北京时间</span><span class="s1"> 
+    ticks = time.time() - ticks </span><span class="s0"># 计算时间消耗</span><span class="s1"> 
+    Log(</span><span class="s5">u'共成功迁移 {0} 条记录, 耗时: {1} 秒'</span><span class="s1">.format(countSucceed</span><span class="s3">, </span><span class="s1">ticks)) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+</span></pre>
+</body>
+</html>
